@@ -2,6 +2,8 @@ import serial
 import os.path
 import time
 
+key = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!\"§$%&/()=^°{[]}\+*~#'-_.:,;<>|"
+
 def addCredentials(filename, code):
 	if (not os.path.isfile(filename)):
 		print("No file found named " + filename)
@@ -10,7 +12,7 @@ def addCredentials(filename, code):
 	name = input("Please enter the name of the new set of credentials:")
 	username = input("Please enter the username:")
 	password = input("Please enter the password:")
-	password = encrypt(password, code)
+	password = encrypt(password, code, key)
 
 	file = open(filename, 'a')
 	cred = name + "\t" + username + "\t" + password + "\n"
@@ -79,11 +81,29 @@ def getConnection(port, baudrate):
 	return serial.Serial(port=port, baudrate=baudrate)
 	
 def getCode():
+	code_string = input("Please enter the Code for the encryption:")
+	code = []
+	for c in code_string:
+		code.append(ord(c) - ord('0'))
 	return input("Please enter the Code for the encryption:")
 
-def encrypt(string,code):
-	# TODO
-	return string
+def encrypt(string,code,key):
+	out = ""
+	j = 0
+	for c in string:
+		i = key.index(c)
+		out += key[(i - code[j]) % len(key)]
+		j = (j + 1) % len(code)
+	return out
+
+def decrypt(string,code,key):
+	out = ""
+	j = 0
+	for c in string:
+		i = key.index(c)
+		out += key[(i + code[j]) % len(key)]
+		j = (j + 1) % len(code)
+	return out
 
 def write(arduino, string):
 	arduino.write(bytes(string, 'utf-8'))
