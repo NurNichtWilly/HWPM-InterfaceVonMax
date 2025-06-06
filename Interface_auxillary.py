@@ -74,8 +74,64 @@ def retrieveData(filename, port, baudrate):
 	# TODO
  
 def importData(in_file, out_file, code):
-	# TODO
-    return 0
+    """
+    Imports data from a CSV file (e.g., browser export) and writes it in HWPM format (tab-separated, password encrypted) to out_file.
+    The CSV file should contain the columns: Name, Username, Password (German column names are also supported).
+    """
+    import csv
+    # Check if the input file exists
+    if not os.path.isfile(in_file):
+        print(f"Input file {in_file} not found.")
+        return 1
+    try:
+        with open(in_file, 'r', encoding='utf-8') as csvfile:
+            # Try different delimiters (comma and semicolon)
+            try:
+                reader = csv.reader(csvfile, delimiter=',')
+                rows = list(reader)
+                if len(rows) == 0 or len(rows[0]) < 2:
+                    raise Exception()
+            except:
+                csvfile.seek(0)
+                reader = csv.reader(csvfile, delimiter=';')
+                rows = list(reader)
+        header = rows[0]
+        # Try to find column names, also supporting German names
+        name_idx = None
+        user_idx = None
+        pass_idx = None
+        for i, h in enumerate(header):
+            h_lower = h.strip().lower()
+            # Allow 'benutzername' and 'passwort' as column names
+            if 'name' in h_lower and 'benutzer' not in h_lower:
+                name_idx = i
+            elif 'user' in h_lower or 'benutzer' in h_lower:
+                user_idx = i
+            elif 'pass' in h_lower or 'wort' in h_lower:
+                pass_idx = i
+        # Check if all required columns were found
+        if None in (name_idx, user_idx, pass_idx):
+            print("CSV header must contain Name, Username and Password (German names are also supported).")
+            print(f"Header found: {header}")
+            return 2
+        with open(out_file, 'a', encoding='utf-8') as outfile:
+            for row in rows[1:]:
+                # Skip incomplete rows
+                if len(row) <= max(name_idx, user_idx, pass_idx):
+                    continue
+                name = row[name_idx].strip()
+                username = row[user_idx].strip()
+                password = row[pass_idx].strip()
+                # Encrypt the password using the existing encrypt function
+                password_enc = encrypt(password, code, key)
+                # Write the data in HWPM format (tab-separated) to the output file
+                outfile.write(f"{name}\t{username}\t{password_enc}\n")
+        print(f"Import finished. {len(rows)-1} entries processed.")
+        return 0
+    except Exception as e:
+        # Error handling with exception output
+        print(f"Error during import: {e}")
+        return 3
 
 def getConnection(port, baudrate):
 	return serial.Serial(port=port, baudrate=baudrate)
